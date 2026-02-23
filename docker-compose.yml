@@ -1,16 +1,29 @@
-version: '3'
+version: "3.9"
+
 services:
   claude-wrapper:
-    build: .
-    ports:
-      - "8000:8000"
+    image: ghcr.io/rukongai/claude-code-openai-wrapper:latest
+    container_name: claude-wrapper
     volumes:
-      - ~/.claude:/root/.claude
+      - claude-config:/root
       # Optional: Mount a specific workspace directory
-      # Uncomment and modify the line below to use a custom workspace
-      # - ./workspace:/workspace
+      # - ../workspace:/workspace
     environment:
       - PORT=8000
       # Optional: Set Claude's working directory (defaults to isolated temp dir)
-      # Uncomment and modify the line below to set a custom working directory
       # - CLAUDE_CWD=/workspace
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.claude-wrapper.rule: Host(`claude.yourdomain.com`)
+      traefik.http.routers.claude-wrapper.entrypoints: websecure
+      traefik.http.routers.claude-wrapper.tls: "true"
+      traefik.http.services.claude-wrapper.loadbalancer.server.port: "8000"
+    networks:
+      - eden
+
+volumes:
+  claude-config:
+
+networks:
+  eden:
+    external: true
