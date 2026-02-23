@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  claude-wrapper:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: claude-wrapper
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.claude:/root/.claude
+      # Optional: Mount a specific workspace directory
+      # - ../workspace:/workspace
+    environment:
+      - PORT=8000
+      # Optional: Set Claude's working directory (defaults to isolated temp dir)
+      # - CLAUDE_CWD=/workspace
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.claude-wrapper.rule: Host(`claude-wrapper.eden.watch`)
+      traefik.http.routers.claude-wrapper.entrypoints: websecure
+      traefik.http.routers.claude-wrapper.tls: "true"
+      traefik.http.services.claude-wrapper.loadbalancer.server.port: "8000"
+    networks:
+      - eden
+
+networks:
+  eden:
+    external: true

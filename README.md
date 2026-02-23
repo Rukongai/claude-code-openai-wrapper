@@ -2,6 +2,12 @@
 
 An OpenAI API-compatible wrapper for Claude Code, allowing you to use Claude Code with any OpenAI client library. **Now powered by the official Claude Agent SDK v0.1.18** with enhanced authentication and features.
 
+## Docker Updates
+
+We added a dedicated Docker config variant for Traefik-based deployments and CI image validation:
+- `docker/docker-compose.traefik.yml` includes Traefik labels and an external `eden` network.
+- `.github/workflows/docker-build.yml` builds the repository `Dockerfile` on push/PR to `main` (and manual dispatch) to catch container build issues early.
+
 ## Version
 
 **Current Version:** 2.2.0
