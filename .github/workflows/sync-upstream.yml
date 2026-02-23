@@ -1,0 +1,66 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      upstream_repo:
+        description: "Upstream owner/repo (for example: RichardAtCT/claude-code-openai-wrapper)"
+        required: false
+        default: "RichardAtCT/claude-code-openai-wrapper"
+      upstream_branch:
+        description: "Upstream branch to sync from"
+        required: false
+        default: "main"
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      UPSTREAM_REPO: ${{ github.event.inputs.upstream_repo || 'RichardAtCT/claude-code-openai-wrapper' }}
+      UPSTREAM_BRANCH: ${{ github.event.inputs.upstream_branch || 'main' }}
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare upstream sync changes
+        id: sync
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git remote add upstream "https://github.com/${UPSTREAM_REPO}.git"
+          git fetch upstream "${UPSTREAM_BRANCH}"
+          git checkout -B "sync/upstream-${UPSTREAM_BRANCH}" "origin/main"
+
+          if git merge-base --is-ancestor "upstream/${UPSTREAM_BRANCH}" HEAD; then
+            echo "Already up to date with upstream/${UPSTREAM_BRANCH}."
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git merge --no-edit "upstream/${UPSTREAM_BRANCH}"
+          echo "has_changes=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open pull request for upstream sync
+        if: steps.sync.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: sync/upstream-${{ env.UPSTREAM_BRANCH }}
+          base: main
+          title: "chore: sync from upstream/${{ env.UPSTREAM_BRANCH }}"
+          body: |
+            Automated upstream sync.
+            - Source: `${{ env.UPSTREAM_REPO }}`
+            - Branch: `${{ env.UPSTREAM_BRANCH }}`
+          delete-branch: true
